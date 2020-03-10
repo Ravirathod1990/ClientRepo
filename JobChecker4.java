@@ -22,23 +22,27 @@ public class JobChecker4 {
 
 		List<String> list;
 		StringBuffer extractedText = new StringBuffer();
-		boolean isStart = false;
+		boolean isMainTaskStart = false;
+		boolean isChildTaskStart = false;
 		boolean isSkip = false;
 
 		try {
 			list = Files.readAllLines(file.toPath(), Charset.defaultCharset());
 			for (String line : list) {
-				if (line.contains("1...5...10")) {
-					if (!isStart) {
-						isStart = true;
+				if (line.contains("SAMPLE TAXIDS TABLE")) {
+					isMainTaskStart = true;
+				} else if (line.contains("1...5...10")) {
+					if (!isChildTaskStart) {
+						isChildTaskStart = true;
 						isSkip = true;
-					} else if (isStart) {
-						isStart = false;
+					} else if (isMainTaskStart && isChildTaskStart) {
+						isMainTaskStart = false;
+						isChildTaskStart = false;
 					}
 				} else {
 					isSkip = false;
 				}
-				if (isStart && !isSkip) {
+				if (isMainTaskStart && isChildTaskStart && !isSkip) {
 					extractedText.append(line);
 					extractedText.append(System.lineSeparator());
 				}
