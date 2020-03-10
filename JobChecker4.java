@@ -32,7 +32,7 @@ public class JobChecker4 {
 				if (line.contains("SAMPLE TAXIDS TABLE")) {
 					isMainTaskStart = true;
 				} else if (line.contains("1...5...10")) {
-					if (!isChildTaskStart) {
+					if (!isChildTaskStart && isMainTaskStart) {
 						isChildTaskStart = true;
 						isSkip = true;
 					} else if (isMainTaskStart && isChildTaskStart) {
