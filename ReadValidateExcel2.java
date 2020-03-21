@@ -159,46 +159,40 @@ public class ReadValidateExcel2 {
 			boolean isFound = false;
 			if (reportRow.getAgencyId() != null) {
 				for (CadacReportRow cadacReportRow : listOfCadacDataFromReport) {
-					if (cadacReportRow.getTaxAuthorityId() != null) {
-						if (reportRow.getAgencyId().equals(cadacReportRow.getTaxAuthorityId())) {
-							isFound = true;
-							result.append(reportRow.getAgencyId());
-							if (cadacReportRow.getProcessType() != null
-									&& (cadacReportRow.getProcessType().equals("TAF")
-											|| cadacReportRow.getProcessType().equals("TNL"))) {
-								boolean isFileTypeExist = false;
-								if (cadacReportRow.getFileType() != null) {
-									if (cadacReportRow.getFileType().equals("txt")
-											|| cadacReportRow.getFileType().equals("csv")
-											|| cadacReportRow.getFileType().equals("doc")) {
-										isFileTypeExist = true;
-										result.append(" File Count:" + cadacReportRow.getFileCount());
-										result.append(" File Type:" + cadacReportRow.getFileType());
-										result.append(" Record Count:" + cadacReportRow.getRecordCount());
-										result.append(" Record Length:" + cadacReportRow.getRecordLength());
-									}
-								} else if (cadacReportRow.getFileType() == null) {
-									if (cadacReportRow.getFileFormat() != null) {
-										if (cadacReportRow.getFileFormat().equals("txt")
-												|| cadacReportRow.getFileFormat().equals("csv")
-												|| cadacReportRow.getFileFormat().equals("doc")) {
-											isFileTypeExist = true;
-											result.append(" File Count:" + cadacReportRow.getFileCount());
-											result.append(" File Type:" + cadacReportRow.getFileFormat());
-											result.append(" Record Count:" + cadacReportRow.getRecordCount());
-											result.append(" Record Length:" + cadacReportRow.getRecordLength());
-										}
-									}
-								}
-								if (!isFileTypeExist) {
-									result.append(" File Type/File Format: not valid");
-								}
-							} else {
-								result.append(" Processs Type: not valid");
+					if (cadacReportRow.getTaxAuthorityId() != null
+							&& reportRow.getAgencyId().equals(cadacReportRow.getTaxAuthorityId())) {
+						isFound = true;
+						result.append(reportRow.getAgencyId());
+						if (cadacReportRow.getProcessType() != null && (cadacReportRow.getProcessType().equals("TAF")
+								|| cadacReportRow.getProcessType().equals("TNL"))) {
+							boolean isFileTypeExist = false;
+							if (cadacReportRow.getFileType() != null && (cadacReportRow.getFileType().equals("txt")
+									|| cadacReportRow.getFileType().equals("csv")
+									|| cadacReportRow.getFileType().equals("doc"))) {
+								isFileTypeExist = true;
+								result.append(" File Count:" + cadacReportRow.getFileCount());
+								result.append(" File Type:" + cadacReportRow.getFileType());
+								result.append(" Record Count:" + cadacReportRow.getRecordCount());
+								result.append(" Record Length:" + cadacReportRow.getRecordLength());
+
+							} else if (cadacReportRow.getFileType() == null && cadacReportRow.getFileFormat() != null
+									&& (cadacReportRow.getFileFormat().equals("txt")
+											|| cadacReportRow.getFileFormat().equals("csv")
+											|| cadacReportRow.getFileFormat().equals("doc"))) {
+								isFileTypeExist = true;
+								result.append(" File Count:" + cadacReportRow.getFileCount());
+								result.append(" File Type:" + cadacReportRow.getFileFormat());
+								result.append(" Record Count:" + cadacReportRow.getRecordCount());
+								result.append(" Record Length:" + cadacReportRow.getRecordLength());
 							}
-							result.append(System.lineSeparator());
-							break;
+							if (!isFileTypeExist) {
+								result.append(" File Type/File Format: not valid");
+							}
+						} else {
+							result.append(" Processs Type: not valid");
 						}
+						result.append(System.lineSeparator());
+						break;
 					}
 				}
 				if (!isFound) {
