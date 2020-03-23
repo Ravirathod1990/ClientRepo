@@ -1,39 +1,58 @@
+import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.FilenameFilter;
+import java.io.IOException;
+import java.nio.file.FileSystem;
+import java.nio.file.FileSystems;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.ss.usermodel.WorkbookFactory;
+import org.apache.poi.xssf.usermodel.XSSFRow;
+import org.apache.poi.xssf.usermodel.XSSFSheet;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 public class ReadValidateExcel2 {
 
 	private List<TdoReportRow> listOfRdoDataFromReport = new ArrayList<TdoReportRow>();
 	private List<CadacReportRow> listOfCadacDataFromReport = new ArrayList<CadacReportRow>();
 
-	public String readAndValidateExcelData(String tdoFilepath, String tdoSheetName, String cadacFilepath,
-			String cadacSheetName) throws Exception {
+	private static final int BUFFER_SIZE = 4096;
 
-		if (!new File(tdoFilepath + tdoSheetName).exists()) {
+	public String readAndValidateExcelData(String tdoFilepath, String tdoSheetName, String cadacFilepath,
+			String cadacSheetName, String targetFilePath) throws Exception {
+
+		if (!new File(tdoFilepath).exists()) {
 			return "TDO file not exist in directory";
 		}
-		if (!new File(cadacFilepath + cadacSheetName).exists()) {
+		if (!new File(cadacFilepath).exists()) {
 			return "CA-DAC file not exist in directory";
 		}
-		readRdoReportExcel(tdoFilepath + tdoSheetName);
-		readCadacReportExcel(cadacFilepath + cadacSheetName);
-		return validateData();
+		readRdoReportExcel(tdoFilepath, tdoSheetName);
+		readCadacReportExcel(cadacFilepath, cadacSheetName);
+		return validateData(targetFilePath, tdoSheetName);
 	}
 
-	public void readRdoReportExcel(String filePath) throws Exception {
+	public void readRdoReportExcel(String filePath, String tdoSheetName) throws Exception {
 		Workbook workbook = WorkbookFactory.create(new FileInputStream(filePath));
 
-		Sheet sheet = workbook.getSheetAt(0);
+		Sheet sheet = workbook.getSheet(tdoSheetName);
 
 		Map<String, Integer> map = new HashMap<String, Integer>();
 		Row row = sheet.getRow(0);
@@ -77,10 +96,10 @@ public class ReadValidateExcel2 {
 		}
 	}
 
-	public void readCadacReportExcel(String filePath) throws Exception {
+	public void readCadacReportExcel(String filePath, String cadacSheetName) throws Exception {
 		Workbook workbook = WorkbookFactory.create(new FileInputStream(filePath));
 
-		Sheet sheet = workbook.getSheetAt(0);
+		Sheet sheet = workbook.getSheet(cadacSheetName);
 
 		Map<String, Integer> map = new HashMap<String, Integer>();
 		Row row = sheet.getRow(0);
@@ -153,7 +172,12 @@ public class ReadValidateExcel2 {
 		}
 	}
 
-	public String validateData() {
+	public String validateData(String targetFilePath, String tdoSheetName) throws IOException {
+		Map<Integer, Object[]> tdoMap = new TreeMap<Integer, Object[]>();
+		int key = 1;
+		tdoMap.put(key, new Object[] { "Version", "AgencyID", "State", "AgencyName", "Processs Type", "File Count",
+				"File Type", "File Format", "Record Length", "Record Count" });
+
 		StringBuffer result = new StringBuffer();
 		for (TdoReportRow reportRow : listOfRdoDataFromReport) {
 			boolean isFound = false;
@@ -175,7 +199,14 @@ public class ReadValidateExcel2 {
 								result.append(" Record Count:" + cadacReportRow.getRecordCount());
 								result.append(" Record Length:" + cadacReportRow.getRecordLength());
 
-							} else if (cadacReportRow.getFileType() == null && cadacReportRow.getFileFormat() != null
+								key = key + 1;
+								tdoMap.put(key,
+										new Object[] { reportRow.getVersion(), reportRow.getAgencyId(),
+												reportRow.getState(), reportRow.getAgencyName(),
+												cadacReportRow.getProcessType(), cadacReportRow.getFileCount(),
+												cadacReportRow.getFileType(), cadacReportRow.getFileFormat(),
+												cadacReportRow.getRecordLength(), cadacReportRow.getRecordCount() });
+							} else if (cadacReportRow.getFileFormat() != null
 									&& (cadacReportRow.getFileFormat().equals("txt")
 											|| cadacReportRow.getFileFormat().equals("csv")
 											|| cadacReportRow.getFileFormat().equals("doc"))) {
@@ -184,11 +215,29 @@ public class ReadValidateExcel2 {
 								result.append(" File Type:" + cadacReportRow.getFileFormat());
 								result.append(" Record Count:" + cadacReportRow.getRecordCount());
 								result.append(" Record Length:" + cadacReportRow.getRecordLength());
+
+								key = key + 1;
+								tdoMap.put(key,
+										new Object[] { reportRow.getVersion(), reportRow.getAgencyId(),
+												reportRow.getState(), reportRow.getAgencyName(),
+												cadacReportRow.getProcessType(), cadacReportRow.getFileCount(),
+												cadacReportRow.getFileType(), cadacReportRow.getFileFormat(),
+												cadacReportRow.getRecordLength(), cadacReportRow.getRecordCount() });
 							}
 							if (!isFileTypeExist) {
+								key = key + 1;
+								tdoMap.put(key,
+										new Object[] { reportRow.getVersion(), reportRow.getAgencyId(),
+												reportRow.getState(), reportRow.getAgencyName(),
+												cadacReportRow.getProcessType(), StringUtils.EMPTY, "not valid",
+												"not valid", StringUtils.EMPTY, StringUtils.EMPTY });
 								result.append(" File Type/File Format: not valid");
 							}
 						} else {
+							key = key + 1;
+							tdoMap.put(key, new Object[] { reportRow.getVersion(), reportRow.getAgencyId(),
+									reportRow.getState(), reportRow.getAgencyName(), "not valid", StringUtils.EMPTY,
+									StringUtils.EMPTY, StringUtils.EMPTY, StringUtils.EMPTY, StringUtils.EMPTY });
 							result.append(" Processs Type: not valid");
 						}
 						result.append(System.lineSeparator());
@@ -196,19 +245,131 @@ public class ReadValidateExcel2 {
 					}
 				}
 				if (!isFound) {
+					key = key + 1;
+					tdoMap.put(key,
+							new Object[] { reportRow.getVersion(), reportRow.getAgencyId(), reportRow.getState(),
+									reportRow.getAgencyName(), reportRow.getAgencyId() + "not found in file",
+									StringUtils.EMPTY, StringUtils.EMPTY, StringUtils.EMPTY, StringUtils.EMPTY,
+									StringUtils.EMPTY });
+
 					result.append(reportRow.getAgencyId() + " not found in file");
 					result.append(System.lineSeparator());
 				}
 			}
 		}
+		writeDataToExcel(targetFilePath, tdoSheetName, tdoMap);
 		return result.toString();
 	}
 
+	public void unzip(String zipFilePath, String destDirectory) throws IOException {
+		File destDir = new File(destDirectory);
+		if (!destDir.exists()) {
+			destDir.mkdir();
+		}
+		ZipInputStream zipIn = new ZipInputStream(new FileInputStream(zipFilePath));
+		ZipEntry entry = zipIn.getNextEntry();
+		while (entry != null) {
+			String filePath = destDirectory + File.separator + entry.getName();
+			if (!entry.isDirectory()) {
+				extractFile(zipIn, filePath);
+			} else {
+				File dir = new File(filePath);
+				dir.mkdir();
+			}
+			zipIn.closeEntry();
+			entry = zipIn.getNextEntry();
+		}
+		zipIn.close();
+	}
+
+	private void extractFile(ZipInputStream zipIn, String filePath) throws IOException {
+		BufferedOutputStream bos = new BufferedOutputStream(new FileOutputStream(filePath));
+		byte[] bytesIn = new byte[BUFFER_SIZE];
+		int read = 0;
+		while ((read = zipIn.read(bytesIn)) != -1) {
+			bos.write(bytesIn, 0, read);
+		}
+		bos.close();
+	}
+
+	public File[] fileFinder(String dirName) {
+		File dir = new File(dirName);
+
+		return dir.listFiles(new FilenameFilter() {
+			public boolean accept(File dir, String filename) {
+				return filename.endsWith(".xlsx");
+			}
+		});
+	}
+
+	public void writeDataToExcel(String targetFilePath, String tdoSheetName, Map<Integer, Object[]> tdoMap)
+			throws IOException {
+
+		XSSFWorkbook workbook = (XSSFWorkbook) WorkbookFactory.create(new FileInputStream(targetFilePath));
+
+		XSSFSheet spreadsheet = workbook.getSheet(tdoSheetName);
+
+		// Create row object
+		XSSFRow row;
+
+		// Iterate over data and write to sheet
+		Set<Integer> keyid = tdoMap.keySet();
+		int rowid = 0;
+
+		for (Integer key : keyid) {
+			row = spreadsheet.createRow(rowid++);
+			Object[] objectArr = tdoMap.get(key);
+			int cellid = 0;
+
+			for (Object obj : objectArr) {
+				Cell cell = row.createCell(cellid++);
+				cell.setCellValue((String) obj);
+			}
+		}
+
+		// Write the workbook in file system
+		FileOutputStream out = new FileOutputStream(new File(targetFilePath));
+
+		workbook.write(out);
+		out.close();
+		System.out.println("Data written successfully");
+	}
+
 	public static void main(String[] args) {
+
+		String zipFilePath = "E:\\client\\files\\extract\\files.zip";
+		String fileExtractPath = "E:\\client\\files\\extract\\";
+		String tdoFilePath = "E:\\client\\files\\TDO2020.xlsx";
+		String tdoSheetName = "BC3-YESFORMATV";
+		String cadacSheetName = "STATE MATRIX";
+		String targetFilePath;
+
 		ReadValidateExcel2 readValidateExcel = new ReadValidateExcel2();
 		try {
-			System.out.println(readValidateExcel.readAndValidateExcelData("E:\\client\\files\\", "TDO2020.xlsx",
-					"E:\\client\\files\\", "CA-DAC.xlsx"));
+			FileSystem system = FileSystems.getDefault();
+			Path original = system.getPath(tdoFilePath);
+
+			String origFileName = original.getFileName().toString();
+			String fileName = origFileName.substring(0, origFileName.lastIndexOf("."));
+			String fileExt = origFileName.substring(origFileName.lastIndexOf("."), origFileName.length());
+			Path targetFile = system.getPath(original.getParent() + "\\" + fileName + "_copy" + fileExt);
+			targetFilePath = targetFile.toString();
+
+			try {
+				Files.copy(original, targetFile, StandardCopyOption.REPLACE_EXISTING);
+			} catch (IOException ex) {
+				System.out.println(ex.getMessage());
+			}
+
+			readValidateExcel.unzip(zipFilePath, fileExtractPath);
+			File[] fileArr = readValidateExcel.fileFinder(fileExtractPath);
+			if (fileArr.length > 1) {
+				System.out.println("Multiple file with .xlsx extension exist on the directory");
+				return;
+			} else {
+				System.out.println(readValidateExcel.readAndValidateExcelData(tdoFilePath, tdoSheetName,
+						fileArr[0].getPath(), cadacSheetName, targetFilePath));
+			}
 
 		} catch (Exception e) {
 			e.printStackTrace();
