@@ -1,0 +1,5 @@
+select (case when file_count IS NOT NULL or file_count != '' then file_count else '' end) as file_count,
+(case when file_type IS NOT NULL or file_type != '' then file_type else '' end) as file_type,
+(case when record_length IS NOT NULL or record_length != '' then record_length else '' end) as record_length,
+(case when record_count IS NOT NULL or record_count != '' then record_count else '' end) as record_count
+ from tdo where agencyid = 101
