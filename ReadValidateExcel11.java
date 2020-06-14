@@ -15,6 +15,7 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -39,7 +40,7 @@ public class ReadValidateExcel11 {
 
 	private Map<String, CadacReportRow> listOfCadacDataFromReport = new LinkedHashMap<String, CadacReportRow>();
 	private Map<String, TarTnlReportRow> listOfTarTnlFromReport = new LinkedHashMap<String, TarTnlReportRow>();
-	private List<String> tarTnlColList = new ArrayList<>();
+	private Set<String> tarTnlColList = new LinkedHashSet<>();
 	private List<CadacReportRow> listOfTdoCopyData = new ArrayList<>();
 	private List<TarTnlReportRow> listOfTarTnlCopyData = new ArrayList<>();
 
@@ -258,19 +259,36 @@ public class ReadValidateExcel11 {
 			if (dataRow != null) {
 				int idxForAgencyId = map.get(agencyIdStr);
 				int idxForTrsp = map.get(trspStr);
-				int idxForSkipUpdates = map.get(skipUpdatesStr);
-				int idxForPaymentUpdates = map.get(paymentUpdatesStr);
+				int idxForSkipUpdates = 0;
+				if (skipUpdatesStr != null) {
+					idxForSkipUpdates = map.get(skipUpdatesStr);
+				}
+				int idxForPaymentUpdates = 0;
+				if (paymentUpdatesStr != null) {
+					idxForPaymentUpdates = map.get(paymentUpdatesStr);
+				}
 				int idxForSpecInst = map.get(othSepcialInstStr);
 				int idxTaxTransf = map.get(taxTransfStr);
-				int idxFilterExcep = map.get(filterExcepStr);
-
+				int idxFilterExcep = 0;
+				if (filterExcepStr != null) {
+					idxFilterExcep = map.get(filterExcepStr);
+				}
 				Cell agencyIdCell = dataRow.getCell(idxForAgencyId);
 				Cell trspCell = dataRow.getCell(idxForTrsp);
-				Cell skipUpdatesCell = dataRow.getCell(idxForSkipUpdates);
-				Cell paymentUpdatesCell = dataRow.getCell(idxForPaymentUpdates);
+				Cell skipUpdatesCell = null;
+				if (skipUpdatesStr != null) {
+					skipUpdatesCell = dataRow.getCell(idxForSkipUpdates);
+				}
+				Cell paymentUpdatesCell = null;
+				if (paymentUpdatesStr != null) {
+					paymentUpdatesCell = dataRow.getCell(idxForPaymentUpdates);
+				}
 				Cell specInstCell = dataRow.getCell(idxForSpecInst);
 				Cell taxTransfCell = dataRow.getCell(idxTaxTransf);
-				Cell filterExcepCell = dataRow.getCell(idxFilterExcep);
+				Cell filterExcepCell = null;
+				if (filterExcepStr != null) {
+					filterExcepCell = dataRow.getCell(idxFilterExcep);
+				}
 
 				if (agencyIdCell != null) {
 					String agencyIdVal = checkCellTypeAndReturn(agencyIdCell);
@@ -832,7 +850,7 @@ public class ReadValidateExcel11 {
 				readValidateExcel.copyFileSheet(tdoFilepath, targetFilePath, tdoSheetName);
 				readValidateExcel.readTdoCopyFileAndInsertDataIntoDB(targetFilePath, tdoSheetName);
 			} catch (Exception ex) {
-				System.out.println(ex.getMessage());
+				System.out.println("Exception ==>>" + ex);
 			}
 
 		} catch (Exception e) {
